@@ -1,0 +1,76 @@
+/*
+Theme Name:   Twenty Seventeen Child
+Theme URI:    http://example.com/twenty-fifteen-child
+Description:  Twenty Seventeen Child Theme
+Author:       John Doe
+Author URI:   http://example.com
+Template:     twentyseventeen
+Version:      1.0.0
+*/
+.wrapper {
+	padding: 0 20px;
+
+}
+.align-left {
+	float: left;
+}
+.align-left span{
+    margin: 3px;
+    float: right;
+    margin-top: 15px;
+}
+.align-right {
+	float: right;
+  margin-top: 17px;
+}
+.page-header {
+	margin: 0px;
+	display: inline;
+}
+#content .page-header {
+	width: 100% ;
+}
+.page-header p {
+	margin-left: 10px;
+	margin-top: 30px;
+}
+.fileinput-button {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+.fileinput-button input {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  opacity: 0;
+  -ms-filter: 'alpha(opacity=0)';
+  font-size: 200px !important;
+  direction: ltr;
+  cursor: pointer;
+}
+
+/* Fixes for IE < 8 */
+@media screen\9 {
+  .fileinput-button input {
+    filter: alpha(opacity=0);
+    font-size: 100%;
+    height: 100%;
+  }
+}
+.wrapper .avs-listings-wrap {
+    float: left;
+    width: 100%;
+    height: 450px;
+    overflow: scroll;
+}
+#fileupload {
+    display: none;
+}
+thead th {
+  padding: 5px;
+}
+.btn-primary {
+  margin: 4px;
+}
