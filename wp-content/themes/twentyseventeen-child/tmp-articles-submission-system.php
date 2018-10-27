@@ -1,5 +1,5 @@
 <?php
-/* 
+/*
  * Template Name: Articles submission system
  */
 wp_head();
@@ -10,7 +10,7 @@ wp_head();
     <div class="align-left">
       <p>
         <img width="50" height="50" src="<?php echo WP_THEME_URI . '/avs/assets/images/logo.png'; ?>" />
-        <span><?php the_title(); ?></span>
+        <span><?php the_title();?></span>
       </p>
     </div>
 
@@ -27,7 +27,7 @@ wp_head();
         <tr>
         <th>Sr. No</th>
         <th>Owner</th>
-        <th>Upload</th>	
+        <th>Upload</th>
         <th>UID</th>
         <th>Date Received</th>
         <th>Status</th>
@@ -43,7 +43,7 @@ wp_head();
 
       <tbody>
         <tr>
-          <td align="center" colspan="13">Loading ...</td>  
+          <td align="center" colspan="13">Loading ...</td>
         </tr>
       </tbody>
     </table>
@@ -79,7 +79,7 @@ wp_head();
     <# }) #>
   </script>
 
-  <?php $data = avs_get_google_sheet_data(); ?>
+  <?php $data = avs_get_google_sheet_data();?>
 
 	<script type="text/javascript">
 		(function ($) {
@@ -92,16 +92,16 @@ wp_head();
 		    var filterd_data = fuse.search('Pending, Validated');
 
         $('#avs-listings table tbody').html(tmpl_avs_listings(filterd_data));
-        
+
         $('#avs-fileupload').fileupload({
-          url: '<?php echo WP_SITE_URL; ?>/wp-content/uploads/articles-docs',
+          url: '<?php echo WP_SITE_URL; ?>/wp-content/uploads/articles-docs/',
           dataType: 'json',
-          add: function (e, data) { // https://goo.gl/yKUxaw      
+          add: function (e, data) { // https://goo.gl/yKUxaw
             var ext = data.originalFiles[0]['name'].split('.').pop();
             if (ext == 'docx' || ext == 'doc') {
-              data.submit(); $('#progress-error').html('');
+              $('#progress-error').html('');
+              data.submit();
             } else {
-              alert('test');
               $('#files').html(''); $('#progress .progress-bar').css('width', '0px');
               $('#progress-error').html('*Only doc or docx files are allowed');
             }
@@ -109,6 +109,21 @@ wp_head();
           done: function (e, data) {
             $.each(data.result.files, function (index, file) {
               $('#files').html('<p>' + file.name + '</p>');
+
+              $.ajax({
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                type: 'POST',
+                cache: false,
+                data: {
+                  action: 'avs_process_document',
+                  file_name: file.name,
+                },
+                success : function( response ) {
+                  $.each(JSON.parse(response), function (key, val) {
+                    $('.avs-fileupload-status').append('<p>'+val+'</p>');
+                  });
+                }
+              });
             });
           },
           progressall: function (e, data) {
@@ -120,5 +135,5 @@ wp_head();
 		}(jQuery));
 	</script>
 </div>
-      
-<?php wp_footer(); ?>
+
+<?php wp_footer();?>

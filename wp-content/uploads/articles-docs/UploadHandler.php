@@ -28,7 +28,7 @@ class UploadHandler
         'post_max_size' => 'The uploaded file exceeds the post_max_size directive in php.ini',
         'max_file_size' => 'File is too big',
         'min_file_size' => 'File is too small',
-        'accept_file_types' => 'Filetype not allowed',
+        'accept_file_types' => 'Only doc or docx file are allowed',
         'max_number_of_files' => 'Maximum number of files exceeded',
         'max_width' => 'Image exceeds maximum width',
         'min_width' => 'Image requires a minimum width',
@@ -89,25 +89,8 @@ class UploadHandler
             'readfile_chunk_size' => 10 * 1024 * 1024, // 10 MiB
             // Defines which files can be displayed inline when downloaded:
             'inline_file_types' => '/\.(gif|jpe?g|png)$/i',
-            // Defines which files (based on their names) are accepted for upload.
-            // By default, only allows file uploads with image file extensions.
-            // Only change this setting after making sure that any allowed file
-            // types cannot be executed by the webserver in the files directory,
-            // e.g. PHP scripts, nor executed by the browser when downloaded,
-            // e.g. HTML files with embedded JavaScript code.
-            // Please also read the SECURITY.md document in this repository.
-            'accept_file_types' => '/\.(gif|jpe?g|png)$/i',
-            // Replaces dots in filenames with the given string.
-            // Can be disabled by setting it to false or an empty string.
-            // Note that this is a security feature for servers that support
-            // multiple file extensions, e.g. the Apache AddHandler Directive:
-            // https://httpd.apache.org/docs/current/mod/mod_mime.html#addhandler
-            // Before disabling it, make sure that files uploaded with multiple
-            // extensions cannot be executed by the webserver, e.g.
-            // "example.php.png" with embedded PHP code, nor executed by the
-            // browser when downloaded, e.g. "example.html.gif" with embedded
-            // JavaScript code.
-            'replace_dots_in_filenames' => '-',
+            // Defines which files (based on their names) are accepted for upload:
+            'accept_file_types' => '/.+$/i',
             // The php.ini settings upload_max_filesize and post_max_size
             // take precedence over the following max_file_size setting:
             'max_file_size' => null,
@@ -115,7 +98,7 @@ class UploadHandler
             // The maximum number of files for the upload directory:
             'max_number_of_files' => null,
             // Defines which files are handled as image files:
-            'image_file_types' => '/\.(gif|jpe?g|png)$/i',
+            'image_file_types' => '/\.(doc|docx)$/i',
             // Use exif_imagetype on all files to correct file extensions:
             'correct_image_extensions' => false,
             // Image resolution restrictions:
@@ -544,16 +527,6 @@ class UploadHandler
         // into different directories or replacing hidden system files.
         // Also remove control characters and spaces (\x00..\x20) around the filename:
         $name = trim($this->basename(stripslashes($name)), ".\x00..\x20");
-        // Replace dots in filenames to avoid security issues with servers
-        // that interpret multiple file extensions, e.g. "example.php.png":
-        $replacement = $this->options['replace_dots_in_filenames'];
-        if (!empty($replacement)) {
-            $parts = explode('.', $name);
-            if (count($parts) > 2) {
-                $ext = array_pop($parts);
-                $name = implode($replacement, $parts).'.'.$ext;
-            }
-        }
         // Use a timestamp for empty filenames:
         if (!$name) {
             $name = str_replace('.', '-', microtime(true));
@@ -649,323 +622,6 @@ class UploadHandler
             $src_height
         );
         return $new_img;
-    }
-
-    protected function gd_orient_image($file_path, $src_img) {
-        if (!function_exists('exif_read_data')) {
-            return false;
-        }
-        $exif = @exif_read_data($file_path);
-        if ($exif === false) {
-            return false;
-        }
-        $orientation = (int)@$exif['Orientation'];
-        if ($orientation < 2 || $orientation > 8) {
-            return false;
-        }
-        switch ($orientation) {
-            case 2:
-                $new_img = $this->gd_imageflip(
-                    $src_img,
-                    defined('IMG_FLIP_VERTICAL') ? IMG_FLIP_VERTICAL : 2
-                );
-                break;
-            case 3:
-                $new_img = imagerotate($src_img, 180, 0);
-                break;
-            case 4:
-                $new_img = $this->gd_imageflip(
-                    $src_img,
-                    defined('IMG_FLIP_HORIZONTAL') ? IMG_FLIP_HORIZONTAL : 1
-                );
-                break;
-            case 5:
-                $tmp_img = $this->gd_imageflip(
-                    $src_img,
-                    defined('IMG_FLIP_HORIZONTAL') ? IMG_FLIP_HORIZONTAL : 1
-                );
-                $new_img = imagerotate($tmp_img, 270, 0);
-                imagedestroy($tmp_img);
-                break;
-            case 6:
-                $new_img = imagerotate($src_img, 270, 0);
-                break;
-            case 7:
-                $tmp_img = $this->gd_imageflip(
-                    $src_img,
-                    defined('IMG_FLIP_VERTICAL') ? IMG_FLIP_VERTICAL : 2
-                );
-                $new_img = imagerotate($tmp_img, 270, 0);
-                imagedestroy($tmp_img);
-                break;
-            case 8:
-                $new_img = imagerotate($src_img, 90, 0);
-                break;
-            default:
-                return false;
-        }
-        $this->gd_set_image_object($file_path, $new_img);
-        return true;
-    }
-
-    protected function gd_create_scaled_image($file_name, $version, $options) {
-        if (!function_exists('imagecreatetruecolor')) {
-            error_log('Function not found: imagecreatetruecolor');
-            return false;
-        }
-        list($file_path, $new_file_path) =
-            $this->get_scaled_image_file_paths($file_name, $version);
-        $type = strtolower(substr(strrchr($file_name, '.'), 1));
-        switch ($type) {
-            case 'jpg':
-            case 'jpeg':
-                $src_func = 'imagecreatefromjpeg';
-                $write_func = 'imagejpeg';
-                $image_quality = isset($options['jpeg_quality']) ?
-                    $options['jpeg_quality'] : 75;
-                break;
-            case 'gif':
-                $src_func = 'imagecreatefromgif';
-                $write_func = 'imagegif';
-                $image_quality = null;
-                break;
-            case 'png':
-                $src_func = 'imagecreatefrompng';
-                $write_func = 'imagepng';
-                $image_quality = isset($options['png_quality']) ?
-                    $options['png_quality'] : 9;
-                break;
-            default:
-                return false;
-        }
-        $src_img = $this->gd_get_image_object(
-            $file_path,
-            $src_func,
-            !empty($options['no_cache'])
-        );
-        $image_oriented = false;
-        if (!empty($options['auto_orient']) && $this->gd_orient_image(
-                $file_path,
-                $src_img
-            )) {
-            $image_oriented = true;
-            $src_img = $this->gd_get_image_object(
-                $file_path,
-                $src_func
-            );
-        }
-        $max_width = $img_width = imagesx($src_img);
-        $max_height = $img_height = imagesy($src_img);
-        if (!empty($options['max_width'])) {
-            $max_width = $options['max_width'];
-        }
-        if (!empty($options['max_height'])) {
-            $max_height = $options['max_height'];
-        }
-        $scale = min(
-            $max_width / $img_width,
-            $max_height / $img_height
-        );
-        if ($scale >= 1) {
-            if ($image_oriented) {
-                return $write_func($src_img, $new_file_path, $image_quality);
-            }
-            if ($file_path !== $new_file_path) {
-                return copy($file_path, $new_file_path);
-            }
-            return true;
-        }
-        if (empty($options['crop'])) {
-            $new_width = $img_width * $scale;
-            $new_height = $img_height * $scale;
-            $dst_x = 0;
-            $dst_y = 0;
-            $new_img = imagecreatetruecolor($new_width, $new_height);
-        } else {
-            if (($img_width / $img_height) >= ($max_width / $max_height)) {
-                $new_width = $img_width / ($img_height / $max_height);
-                $new_height = $max_height;
-            } else {
-                $new_width = $max_width;
-                $new_height = $img_height / ($img_width / $max_width);
-            }
-            $dst_x = 0 - ($new_width - $max_width) / 2;
-            $dst_y = 0 - ($new_height - $max_height) / 2;
-            $new_img = imagecreatetruecolor($max_width, $max_height);
-        }
-        // Handle transparency in GIF and PNG images:
-        switch ($type) {
-            case 'gif':
-            case 'png':
-                imagecolortransparent($new_img, imagecolorallocate($new_img, 0, 0, 0));
-            case 'png':
-                imagealphablending($new_img, false);
-                imagesavealpha($new_img, true);
-                break;
-        }
-        $success = imagecopyresampled(
-            $new_img,
-            $src_img,
-            $dst_x,
-            $dst_y,
-            0,
-            0,
-            $new_width,
-            $new_height,
-            $img_width,
-            $img_height
-        ) && $write_func($new_img, $new_file_path, $image_quality);
-        $this->gd_set_image_object($file_path, $new_img);
-        return $success;
-    }
-
-    protected function imagick_get_image_object($file_path, $no_cache = false) {
-        if (empty($this->image_objects[$file_path]) || $no_cache) {
-            $this->imagick_destroy_image_object($file_path);
-            $image = new \Imagick();
-            if (!empty($this->options['imagick_resource_limits'])) {
-                foreach ($this->options['imagick_resource_limits'] as $type => $limit) {
-                    $image->setResourceLimit($type, $limit);
-                }
-            }
-            $image->readImage($file_path);
-            $this->image_objects[$file_path] = $image;
-        }
-        return $this->image_objects[$file_path];
-    }
-
-    protected function imagick_set_image_object($file_path, $image) {
-        $this->imagick_destroy_image_object($file_path);
-        $this->image_objects[$file_path] = $image;
-    }
-
-    protected function imagick_destroy_image_object($file_path) {
-        $image = (isset($this->image_objects[$file_path])) ? $this->image_objects[$file_path] : null ;
-        return $image && $image->destroy();
-    }
-
-    protected function imagick_orient_image($image) {
-        $orientation = $image->getImageOrientation();
-        $background = new \ImagickPixel('none');
-        switch ($orientation) {
-            case \imagick::ORIENTATION_TOPRIGHT: // 2
-                $image->flopImage(); // horizontal flop around y-axis
-                break;
-            case \imagick::ORIENTATION_BOTTOMRIGHT: // 3
-                $image->rotateImage($background, 180);
-                break;
-            case \imagick::ORIENTATION_BOTTOMLEFT: // 4
-                $image->flipImage(); // vertical flip around x-axis
-                break;
-            case \imagick::ORIENTATION_LEFTTOP: // 5
-                $image->flopImage(); // horizontal flop around y-axis
-                $image->rotateImage($background, 270);
-                break;
-            case \imagick::ORIENTATION_RIGHTTOP: // 6
-                $image->rotateImage($background, 90);
-                break;
-            case \imagick::ORIENTATION_RIGHTBOTTOM: // 7
-                $image->flipImage(); // vertical flip around x-axis
-                $image->rotateImage($background, 270);
-                break;
-            case \imagick::ORIENTATION_LEFTBOTTOM: // 8
-                $image->rotateImage($background, 270);
-                break;
-            default:
-                return false;
-        }
-        $image->setImageOrientation(\imagick::ORIENTATION_TOPLEFT); // 1
-        return true;
-    }
-
-    protected function imagick_create_scaled_image($file_name, $version, $options) {
-        list($file_path, $new_file_path) =
-            $this->get_scaled_image_file_paths($file_name, $version);
-        $image = $this->imagick_get_image_object(
-            $file_path,
-            !empty($options['crop']) || !empty($options['no_cache'])
-        );
-        if ($image->getImageFormat() === 'GIF') {
-            // Handle animated GIFs:
-            $images = $image->coalesceImages();
-            foreach ($images as $frame) {
-                $image = $frame;
-                $this->imagick_set_image_object($file_name, $image);
-                break;
-            }
-        }
-        $image_oriented = false;
-        if (!empty($options['auto_orient'])) {
-            $image_oriented = $this->imagick_orient_image($image);
-        } 
-	    
-        $image_resize = false; 
-        $new_width = $max_width = $img_width = $image->getImageWidth();
-        $new_height = $max_height = $img_height = $image->getImageHeight(); 
-		  
-        // use isset(). User might be setting max_width = 0 (auto in regular resizing). Value 0 would be considered empty when you use empty()
-        if (isset($options['max_width'])) {
-            $image_resize = true; 
-            $new_width = $max_width = $options['max_width']; 
-        }
-        if (isset($options['max_height'])) {
-            $image_resize = true;
-            $new_height = $max_height = $options['max_height'];
-        }
-        
-        $image_strip = (isset($options['strip']) ? $options['strip'] : false);
- 
-        if ( !$image_oriented && ($max_width >= $img_width) && ($max_height >= $img_height) && !$image_strip && empty($options["jpeg_quality"]) ) {        
-            if ($file_path !== $new_file_path) {
-                return copy($file_path, $new_file_path);
-            }
-            return true;
-        }
-        $crop = (isset($options['crop']) ? $options['crop'] : false);
-        
-        if ($crop) {
-            $x = 0;
-            $y = 0;
-            if (($img_width / $img_height) >= ($max_width / $max_height)) {
-                $new_width = 0; // Enables proportional scaling based on max_height
-                $x = ($img_width / ($img_height / $max_height) - $max_width) / 2;
-            } else {
-                $new_height = 0; // Enables proportional scaling based on max_width
-                $y = ($img_height / ($img_width / $max_width) - $max_height) / 2;
-            }
-        }
-        $success = $image->resizeImage(
-            $new_width,
-            $new_height,
-            isset($options['filter']) ? $options['filter'] : \imagick::FILTER_LANCZOS,
-            isset($options['blur']) ? $options['blur'] : 1,
-            $new_width && $new_height // fit image into constraints if not to be cropped
-        );
-        if ($success && $crop) {
-            $success = $image->cropImage(
-                $max_width,
-                $max_height,
-                $x,
-                $y
-            );
-            if ($success) {
-                $success = $image->setImagePage($max_width, $max_height, 0, 0);
-            }
-        }
-        $type = strtolower(substr(strrchr($file_name, '.'), 1));
-        switch ($type) {
-            case 'jpg':
-            case 'jpeg':
-                if (!empty($options['jpeg_quality'])) {
-                    $image->setImageCompression(\imagick::COMPRESSION_JPEG);
-                    $image->setImageCompressionQuality($options['jpeg_quality']);
-                }
-                break;
-        }
-        if ( $image_strip ) {
-            $image->stripImage();
-        }
-        return $success && $image->writeImage($new_file_path);
     }
 
     protected function imagemagick_create_scaled_image($file_name, $version, $options) {

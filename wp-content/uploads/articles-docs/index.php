@@ -12,4 +12,6 @@
 
 error_reporting(E_ALL | E_STRICT);
 require('UploadHandler.php');
-$upload_handler = new UploadHandler();
+$upload_handler = new UploadHandler(array(
+  'accept_file_types' => '/\.(doc|docx)$/i' // By default, only allow file uploads with image file extensions:
+));
