@@ -57,25 +57,29 @@ wp_head();
     <div id="progress-error" style="color: red;"></div>
   </div>
 
+  <?php $avs_current_user = avs_get_display_name(); ?>
+
   <script type="text/html" id="tmpl-avs-listings">
     <# _.each( data, function( item, index ){  #>
-      <tr>
-        <td>&nbsp&nbsp{{{index+1}}}</td>
-        <td>{{{item[1]}}}</td>
-        <td>
-          <button type="button" class="btn btn-primary"  onclick="jQuery('#avs-fileupload').click();">Upload</button>
-        </td>
-        <td>{{{item[2]}}}</td>
-        <td>{{{item[4]}}}</td>
-        <td>{{{item[6]}}}</td>
-        <td>{{{item[7]}}}</td>
-        <td>{{{item[9]}}}</td>
-        <td>{{{item[10]}}}</td>
-        <td>{{{item[11]}}}</td>
-        <td>{{{item[12]}}}</td>
-        <td>{{{item[13]}}}</td>
-        <td>NA</td>
-      </tr>
+      <# if(item[1] == '<?php echo $avs_current_user; ?>') { #>
+        <tr>
+          <td>&nbsp&nbsp{{{index+1}}}</td>
+          <td>{{{item[1]}}}</td>
+          <td>
+            <button type="button" class="btn btn-primary"  onclick="jQuery('#avs-fileupload').click();">Upload</button>
+          </td>
+          <td>{{{item[2]}}}</td>
+          <td>{{{item[4]}}}</td>
+          <td>{{{item[6]}}}</td>
+          <td>{{{item[7]}}}</td>
+          <td>{{{item[9]}}}</td>
+          <td>{{{item[10]}}}</td>
+          <td>{{{item[11]}}}</td>
+          <td>{{{item[12]}}}</td>
+          <td>{{{item[13]}}}</td>
+          <td>NA</td>
+        </tr>
+      <# } #>
     <# }) #>
   </script>
 

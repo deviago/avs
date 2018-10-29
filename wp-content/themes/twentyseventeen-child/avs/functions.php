@@ -99,6 +99,48 @@ function avs_update_google_sheet_access_token(){
 add_action( 'wp_ajax_avs_google_sheet_access_token', 'avs_update_google_sheet_access_token' );
 
 /**
+ * Process Google Drive document upload
+ */
+function avs_upload_document_to_google_drive() {
+  require_once WP_THEME_PATH.'/avs/google-api-php-client/vendor/autoload.php';
+
+  $client = new Google_Client();
+  $client->setAuthConfig(WP_THEME_PATH.'/avs/google-api-php-client/client_secrets.json');
+  $client->addScope(Google_Service_Sheets::SPREADSHEETS_READONLY);
+  $client->addScope('https://www.googleapis.com/auth/drive');  
+
+  $response = ['error' => false];
+  $tokenPath = WP_THEME_PATH.'/avs/google-api-php-client/token.json';
+
+  if ( file_exists($tokenPath) ) { // Check if token exist
+    $accessToken = json_decode(file_get_contents($tokenPath), true);
+    $client->setAccessToken($accessToken);
+
+    // If previous token expired
+    if ($client->isAccessTokenExpired()) {
+      header('Location: ' . filter_var($client->createAuthUrl(), FILTER_SANITIZE_URL));
+      exit();
+    }else{
+      $driveService = new Google_Service_Drive($client);
+      $fileMetadata = new Google_Service_Drive_DriveFile(array('name' => 'Death_Note_L_ident.jpg'));
+      $content = file_get_contents(WP_THEME_PATH.'/avs/google-api-php-client/Death_Note_L_ident.jpg');      
+      $file = $driveService->files->create($fileMetadata, array(
+        'data' => $content,
+        'mimeType' => 'image/jpeg',
+        'uploadType' => 'multipart',
+        'fields' => 'id'
+      ));
+
+      printf('File ID: %s\n', $file->id);
+    }
+  } else {
+    header('Location: ' . filter_var($client->createAuthUrl(), FILTER_SANITIZE_URL));
+    exit();
+  }
+}
+add_action( 'wp_ajax_avs_upload_document_to_google_drive', 'avs_upload_document_to_google_drive' );
+
+/**
  * Process document for validation
  */
 function avs_process_document(){
