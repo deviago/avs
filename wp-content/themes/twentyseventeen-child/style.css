@@ -38,7 +38,7 @@ Version:      1.0.0
   width: 100%;
 }
 .page-header p {
-  margin-top: 30px;
+  float: left;
 }
 .avs-fileupload-status {
   margin: 15px 0;
@@ -82,4 +82,27 @@ thead th {
   -webkit-transition: width .6s ease;
   -o-transition: width .6s ease;
   transition: width .6s ease;
+}
+.bPopup-dialog {
+  display: none;
+}
+.bPopup-body {
+  width: 500px;
+  background: white;
+  border-radius: 5px;
+  padding: 15px;
+  left: 0 !important;
+  margin: auto;
+  text-align: center;
+  right: 0;
+}
+.bPopup-content {
+  background-color: white;
+  padding: 15px;
+}
+.bPopup-body h2 {
+  text-align: left;
+}
+.bPopup-footer {
+  text-align: center;
 }
